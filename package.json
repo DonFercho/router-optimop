@@ -1,0 +1,10 @@
+{
+  "name": "router-optimo",
+  "version": "1.0.0",
+  "description": "Ubicador óptimo de router WiFi con cálculo multivariable (Matemáticas 3).",
+  "scripts": {
+    "start": "npx serve .",
+    "test": "node tests/modelo.test.js"
+  },
+  "license": "MIT"
+}

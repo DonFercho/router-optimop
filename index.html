@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ubicador óptimo de router WiFi</title>
+<meta name="description" content="Encuentra el mejor lugar para tu router WiFi con cálculo multivariable.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📶%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<header><h1>Ubicador óptimo de router WiFi</h1><p>Dibuja tu casa, ajusta los muros y encuentra el mejor punto para el router · Matemáticas 3</p></header>
+<main>
+<section class="card" aria-label="Controles">
+  <h2>Herramientas del plano</h2>
+  <div class="tools" id="tools">
+    <button data-tool="router" class="on">Router</button>
+    <button data-tool="room">Habitación</button>
+    <button data-tool="door">Puerta</button>
+    <button data-tool="plug">Enchufe</button>
+    <button data-tool="erase">Borrar</button>
+  </div>
+  <p class="hint" id="ayuda"></p>
+  <h2>Habitaciones (nombre · peso)</h2>
+  <div id="rooms"></div>
+  <h2>Plantillas y archivo</h2>
+  <div class="row"><button data-preset="casa">Casa</button><button data-preset="apartamento">Apto.</button><button data-preset="vacio">Vacío</button></div>
+  <div class="row" style="margin-top:6px"><button id="exp">Exportar</button><button id="imp">Importar</button></div>
+  <input id="file" type="file" accept="application/json,.json" hidden>
+  <h2>Modelo de señal</h2>
+  <div class="m">P = P₁ − 10·n·log₁₀(d) − L·(muros)</div>
+  <label>Pérdida por muro L <b id="vL"></b></label><input id="L" type="range" min="0" max="10" step="0.5" value="4">
+  <label>Exponente n <b id="vn"></b></label><input id="n" type="range" min="2" max="4" step="0.1" value="3">
+  <label>Umbral mínimo <b id="vP"></b></label><input id="Pm" type="range" min="-85" max="-60" step="1" value="-64">
+  <h2>Restricción (Lagrange)</h2>
+  <label><span>Router con cable desde el enchufe</span><input id="rc" type="checkbox"></label>
+  <label>Largo del cable <b id="vR"></b></label><input id="R" type="range" min="1" max="8" step="0.5" value="4">
+  <h2>Derivada direccional</h2>
+  <label>Dirección del usuario <b id="vA"></b></label><input id="A" type="range" min="0" max="355" step="5" value="45">
+</section>
+
+<section class="card" aria-label="Plano">
+  <div class="row" style="margin-bottom:10px"><button id="b1" class="on">Ver con router actual</button><button id="b2">Ver con router óptimo</button></div>
+  <canvas id="cv" aria-label="Plano de la casa con mapa de calor de la señal"></canvas>
+  <p class="estado" id="estado" role="status" aria-live="polite"></p>
+  <p class="hint">Estrella = punto óptimo · línea punteada = ascenso por gradiente · flecha naranja = ∇F · flecha gris = dirección del usuario.</p>
+</section>
+
+<section class="card" aria-label="Resultados">
+  <h2>Resultado</h2>
+  <div class="big" id="msg"></div>
+  <div class="kv"><span>Router actual</span><b id="ra"></b></div>
+  <div class="kv"><span>Router óptimo</span><b id="ro"></b></div>
+  <h2>Cálculo en el óptimo</h2>
+  <div class="kv"><span>∂F/∂x , ∂F/∂y</span><b id="gr"></b></div>
+  <div class="kv"><span>det(H) , F_xx</span><b id="hs"></b></div>
+  <div class="kv"><span>Clasificación</span><b id="cl"></b></div>
+  <div class="kv"><span>Multiplicador λ</span><b id="lm"></b></div>
+  <h2>En tu router actual</h2>
+  <div class="kv"><span>∇F</span><b id="g0"></b></div>
+  <div class="kv"><span>D<sub>u</sub>F (dirección elegida)</span><b id="du"></b></div>
+  <details><summary>Temas del curso que usa</summary><ul>
+    <li><b>Regla de la cadena:</b> P depende de d, y d de (x, y).</li>
+    <li><b>Integral doble en región no rectangular:</b> F suma la señal ponderada sobre las habitaciones dibujadas.</li>
+    <li><b>Derivadas parciales y gradiente:</b> el ascenso mueve el router hacia donde F sube más rápido.</li>
+    <li><b>Máximos y mínimos:</b> ∇F = 0 y signo del Hessiano.</li>
+    <li><b>Lagrange:</b> con cable, el óptimo queda en el borde del círculo: ∇F = λ∇g.</li>
+    <li><b>Derivada direccional:</b> D<sub>u</sub>F = ∇F · u.</li></ul></details>
+</section>
+</main>
+<script src="js/modelo.js"></script>
+<script src="js/planos.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
