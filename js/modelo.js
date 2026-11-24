@@ -1,7 +1,7 @@
 /*
  * MODELO MATEMÁTICO (sin DOM, se puede probar con Node)
  * -----------------------------------------------------
- * Señal:      P(x,y) = P1 - 10·n·log10(d) - L·(muros cruzados)
+ * Señal:      S(x,y) = 100 - 10·n·log10(d) - L·(muros cruzados) [% de 0 a 100]
  * Objetivo:   F(x0,y0) = 100 · Σ w·σ((P - Pmin)/s) / Σ w     (integral doble discretizada)
  * Óptimo:     ascenso por gradiente (∇F) desde varios puntos de partida.
  * Lagrange:   con cable, el óptimo queda en el borde del círculo: ∇F = λ∇g.
@@ -14,8 +14,8 @@
   'use strict';
   const G = 0.5;            // resolución de la cuadrícula del plano (m)
   const W = 14, H = 9;      // tamaño máximo del plano (m)
-  const P1 = -40;           // potencia a 1 m del router (dBm)
-  const SUAV = 3;           // suavizado de la sigmoide (dB)
+  const P1 = 100;           // señal de referencia a 1 m del router (%)
+  const SUAV = 5;           // suavizado de la sigmoide (unidades de %)
   const MUESTRA = 0.4;      // separación de los puntos de la integral (m)
 
   const sig = z => 1 / (1 + Math.exp(-z));

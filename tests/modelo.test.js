@@ -5,7 +5,7 @@ const P = require('../js/planos.js');
 let n = 0;
 const t = (nombre, fn) => { fn(); n++; console.log('ok -', nombre); };
 const room = (x, y, w, h, weight = 1) => ({ x, y, w, h, weight });
-const params = { L: 4, n: 3, Pm: -70, con: false, R: 4 };
+const params = { L: 4, n: 3, Pm: 65, con: false, R: 4 };
 
 t('una habitación tiene 4 muros', () => assert.strictEqual(M.buildWalls([room(0, 0, 4, 4)], []).length, 4));
 t('dos habitaciones contiguas comparten el muro (5 muros)', () =>
@@ -20,11 +20,11 @@ t('cruzar un muro cuenta 1; dentro de la misma habitación 0', () => {
   assert.strictEqual(M.murosCruzados(ctx, 1, 1, 3, 3), 0);
 });
 t('el centro cubre más que una esquina en una sola habitación', () => {
-  const ctx = M.crearContexto({ rooms: [room(0, 0, 8, 6)], doors: [], plug: { x: 1, y: 1 } }, { ...params, Pm: -62 });
+  const ctx = M.crearContexto({ rooms: [room(0, 0, 8, 6)], doors: [], plug: { x: 1, y: 1 } }, { ...params, Pm: 60 });
   assert.ok(M.F(ctx, 4, 3) > M.F(ctx, 0.5, 0.5));
 });
 t('el óptimo de una habitación simétrica queda cerca del centro', () => {
-  const ctx = M.crearContexto({ rooms: [room(0, 0, 8, 6)], doors: [], plug: { x: 1, y: 1 } }, { ...params, Pm: -62 });
+  const ctx = M.crearContexto({ rooms: [room(0, 0, 8, 6)], doors: [], plug: { x: 1, y: 1 } }, { ...params, Pm: 60 });
   const o = M.optimo(ctx);
   assert.ok(Math.abs(o.q[0] - 4) < 1.2 && Math.abs(o.q[1] - 3) < 1.2, JSON.stringify(o.q));
 });

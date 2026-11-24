@@ -1,132 +1,54 @@
 # Ubicador óptimo de router WiFi
 
-Aplicación web que encuentra el mejor lugar para poner un router WiFi dentro de una casa, usando **cálculo multivariable** (Matemáticas 3). Dibujas el plano (habitaciones, puertas, enchufe), ajustas el modelo de señal y la app calcula el punto óptimo.
+Aplicación web interactiva que encuentra el mejor lugar para colocar un router WiFi dentro de una casa, utilizando conceptos de **Cálculo Multivariable** (Matemáticas 3). El usuario dibuja el plano, ajusta las condiciones de los muros y la app calcula y grafica el punto óptimo.
 
-> Proyecto académico de Ingeniería de Sistemas y Telecomunicaciones. Es un modelo simplificado, no está calibrado con mediciones reales.
+> Proyecto académico de Ingeniería de Sistemas y Telecomunicaciones.
 
-## Qué hace
+## Características principales
 
-- Editor de plano: dibuja habitaciones (rectángulos que se ajustan a 0.5 m), pon o quita puertas de 1 m, borra, ubica el enchufe.
-- Todos los muros tienen el mismo espesor y la misma pérdida de señal (parámetro L).
-- Peso por habitación: la sala o el estudio pueden valer más que el baño.
-- Mapa de calor de la señal con tu router actual o con el óptimo.
-- Compara la cobertura actual contra la óptima.
-- Modo con restricción: el router solo puede estar a cierta distancia del enchufe (cable).
-- Plantillas (casa, apartamento), exportar/importar el plano en JSON y guardado automático en el navegador.
+- **Editor de plano:** dibuja habitaciones, añade puertas de 1 m, ubica el enchufe y asigna un peso (importancia) a cada habitación.
+- **Mapa de calor:** visualiza la intensidad de la señal (0% a 100%) desde el router actual o desde el punto óptimo calculado.
+- **Restricción física:** modo "cable" que limita la posición del router a un radio máximo desde el enchufe.
+- **Plantillas y guardado:** incluye planos de ejemplo (casa, apartamento) y guarda tu progreso en el navegador.
 
 ## Stack tecnológico
 
-| Capa | Tecnología |
-|---|---|
-| Lenguaje | JavaScript (vanilla, sin frameworks ni build) |
-| Interfaz | HTML5 + CSS3, dibujo con Canvas 2D |
-| Pruebas | Node.js (`assert`), sin dependencias |
-| Control de versiones | Git + GitHub |
-| Despliegue | GitHub Pages con GitHub Actions |
-| Editor | Visual Studio Code (+ extensión Live Server) |
+- **Vanilla JavaScript, HTML5 y CSS3** (sin frameworks ni compiladores).
+- **Canvas 2D** para el dibujo del plano y el mapa de calor.
+- **Node.js** (solo para ejecutar las pruebas unitarias).
 
-No hay `npm install` ni compilación: es una página estática.
+## Ejecución local
 
-## Estructura
+1. Abre la carpeta del proyecto en Visual Studio Code.
+2. Usa la extensión **Live Server** (clic derecho sobre `index.html` > *Open with Live Server*).
+3. Para correr las pruebas del modelo matemático: `npm test` (requiere Node.js).
 
-```
-router-optimo/
-├── index.html            Página principal
-├── css/estilos.css       Estilos (modo claro y oscuro)
-├── js/
-│   ├── modelo.js         Matemáticas: señal, integral, gradiente, Hessiano, Lagrange
-│   ├── planos.js         Plantillas y validación de planos
-│   └── ui.js             Canvas, editor del plano y resultados
-├── tests/modelo.test.js  Pruebas del modelo
-├── .github/workflows/deploy.yml   Despliegue automático a GitHub Pages
-├── package.json  .gitignore  LICENSE  README.md
-```
+## Fundamento Matemático
 
-## Ejecutar en tu computador
+El objetivo es maximizar la cobertura ponderada de la casa. La app implementa los siguientes temas del curso:
 
-1. Instala [Visual Studio Code](https://code.visualstudio.com/) y la extensión **Live Server**.
-2. Abre la carpeta del proyecto (`Archivo > Abrir carpeta`).
-3. Clic derecho sobre `index.html` > **Open with Live Server**.
+### 1. Integral doble en región no rectangular
+La función objetivo representa la cobertura. Se calcula como una suma de Riemann (integral doble discretizada) sobre las muestras espaciales de las habitaciones, las cuales pueden tener formas no rectangulares (L, T, etc.).
 
-También funciona con doble clic en `index.html`, o con `npx serve .` si tienes Node.js.
+### 2. Derivadas parciales y gradiente
+Para encontrar el máximo, se calcula el gradiente de la cobertura respecto a la posición del router:
+El algoritmo usa **ascenso por gradiente**: se mueve el router iterativamente en la dirección en que la cobertura crece más rápido. Se ejecuta desde múltiples puntos de partida para evitar quedar atrapado en máximos locales.
 
-Pruebas: `node tests/modelo.test.js` (o `npm test`).
+### 3. Máximos y mínimos
+En el punto óptimo interior, el gradiente se anula. El criterio del **Hessiano** (matriz de segundas derivadas) confirma que es un máximo.
 
-## Cómo funciona (y qué tema del curso usa cada parte)
+### 4. Multiplicadores de Lagrange
+Si se activa la restricción del cable, el router solo puede estar dentro de un círculo centrado en el enchufe.
+Cuando el óptimo cae en el borde del círculo (restricción activa), el gradiente de la cobertura es paralelo al gradiente de la restricción. La app verifica esta condición y calcula el multiplicador.
 
-**Señal recibida** en un punto (x, y) cuando el router está en (x₀, y₀):
+## Modelo de señal
+Para que los valores sean intuitivos, la señal \(S\) se mide en porcentaje (0% a 100%), no en dBm.
+Donde \(d\) es la distancia euclidiana al router, \(n\) es el exponente de pérdida por distancia y \(L\) es la pérdida por cada muro.
 
-```
-P = P₁ − 10·n·log₁₀(d) − L·(muros cruzados),   d = √((x−x₀)² + (y−y₀)²)
-```
-
-**Función objetivo** (cobertura ponderada), versión discreta de una integral doble sobre las habitaciones dibujadas:
-
-```
-F(x₀,y₀) = 100 · Σ wⱼ·σ((Pⱼ − P_min)/s) / Σ wⱼ   ≈   ∬ w(x,y)·σ(...) dA
-```
-
-| Tema | Dónde está |
-|---|---|
-| Regla de la cadena | P depende de d, y d de (x, y) (`senal` en `modelo.js`) |
-| Integral en región no rectangular | `F`: suma sobre habitaciones de cualquier forma (L, T, etc.) |
-| Derivadas parciales y gradiente | `grad` y `ascenso`: ∇F = (∂F/∂x₀, ∂F/∂y₀) |
-| Máximos y mínimos | `hessiano`: det(H) > 0 y F_xx < 0 confirman un máximo |
-| Multiplicadores de Lagrange | Con cable: ∇F = λ∇g, g = (x−xₑ)² + (y−yₑ)² − R² (`proj`, panel de resultados) |
-| Derivada direccional | D_u F = ∇F · u, con la dirección elegida en el control |
-
-Los muros hacen la señal discontinua, así que el Hessiano es aproximado y la app lo indica. Como F puede tener varios máximos locales, el óptimo se busca desde varios puntos de partida.
-
-## Subir el proyecto a GitHub
-
-1. Instala [Git](https://git-scm.com/downloads) y crea una cuenta en [github.com](https://github.com).
-2. En github.com crea un repositorio nuevo llamado `router-optimo` (público, **sin** README ni .gitignore).
-3. En la terminal de VS Code (`Terminal > Nueva terminal`), dentro de la carpeta del proyecto:
-
-```bash
-git init
-git add .
-git commit -m "Primera versión: ubicador óptimo de router"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/router-optimo.git
-git push -u origin main
-```
-
-Si Git pide credenciales, inicia sesión desde el navegador cuando lo ofrezca, o usa un *Personal Access Token* en lugar de la contraseña (GitHub > Settings > Developer settings).
-
-Antes de subir, cambia `TU NOMBRE` en el archivo `LICENSE`.
-
-## Desplegar en GitHub Pages
-
-1. En el repositorio: **Settings > Pages > Build and deployment > Source: GitHub Actions**.
-2. Haz un `push` a `main` (o ve a la pestaña **Actions** y ejecuta «Desplegar en GitHub Pages»).
-3. Cuando termine, la app queda en `https://TU_USUARIO.github.io/router-optimo/`.
-
-El flujo ejecuta las pruebas antes de publicar: si una prueba falla, no se despliega.
-
-## Agregar cambios después
-
-```bash
-git add .
-git commit -m "Describe el cambio"
-git push
-```
-
-Cada `push` a `main` vuelve a desplegar la página automáticamente (tarda 1 o 2 minutos).
-
-## Problemas frecuentes
-
-- **La página sale en blanco en Pages:** revisa que Source sea *GitHub Actions* y que la pestaña Actions muestre el despliegue en verde.
-- **`git push` rechazado:** el repositorio se creó con README. Usa `git pull origin main --allow-unrelated-histories` y vuelve a hacer `git push`.
-- **El plano importado no carga:** debe tener medidas múltiplos de 0.5 m, habitaciones de al menos 1 × 1 m, dentro de 14 × 9 m y sin solapes.
-
-## Ideas para ampliar
-
-- Varios routers o repetidores.
-- Dos pisos con integrales triples y coordenadas cilíndricas (propagación 3D).
-- Materiales distintos por muro.
-- Calibrar L y n con mediciones reales de una app de WiFi.
-
-## Licencia
-
-MIT. Ver `LICENSE`.
+## Estructura del proyecto
+- `index.html`: Interfaz principal.
+- `css/estilos.css`: Estilos visuales (modo claro/oscuro).
+- `js/modelo.js`: Lógica matemática pura (sin dependencias del DOM).
+- `js/planos.js`: Plantillas y validación de los planos.
+- `js/ui.js`: Control del Canvas, eventos del ratón y renderizado.
+- `tests/`: Pruebas unitarias del modelo matemático.

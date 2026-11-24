@@ -59,11 +59,14 @@
     return { L: +$('L').value, n: +$('n').value, Pm: +$('Pm').value, con: $('rc').checked, R: +$('R').value };
   }
   const f1 = v => v.toFixed(1), f2 = v => v.toFixed(2);
-  function vaciar() { for (const id of ['ra', 'ro', 'gr', 'hs', 'cl', 'lm', 'g0']) $(id).textContent = '—'; }
+  function vaciar() {
+    for (const id of ['ra', 'ro', 'gr', 'hs', 'lm', 'g0']) $(id).textContent = '—';
+    $('chk').innerHTML = '';
+  }
 
   function actualizar() {
     const p = params();
-    $('vL').textContent = p.L + ' dB'; $('vn').textContent = p.n; $('vP').textContent = p.Pm + ' dBm'; $('vR').textContent = p.R + ' m';
+    $('vL').textContent = p.L + ' %'; $('vn').textContent = p.n; $('vP').textContent = p.Pm + ' %'; $('vR').textContent = p.R + ' m';
     asegurarDentro();
     if (!plan.rooms.length) {
       $('msg').textContent = 'Dibuja al menos una habitación con la herramienta «Habitación».'; vaciar(); dibujar(null); return;
@@ -78,15 +81,40 @@
     if (!op) { $('msg').textContent = 'No hay un punto válido: el enchufe y el cable no alcanzan ninguna habitación.'; vaciar(); dibujar(ctx, p); return; }
     const r = plan.router, c0 = M.cobertura(ctx, r.x, r.y), g0 = M.grad(ctx, r.x, r.y), own = M.ascenso(ctx, [r.x, r.y], 40);
     const [x, y] = op.o.q;
+
     $('msg').innerHTML = `Tu router actual cubre <b>${c0[0].toFixed(0)} %</b> de la casa (ponderada). En el punto óptimo cubrirías <b>${op.c1[0].toFixed(0)} %</b>.`;
-    $('ra').textContent = `${c0[0].toFixed(0)} % · ${c0[1].toFixed(0)} dBm`;
-    $('ro').textContent = `(${f1(x)}, ${f1(y)}) m · ${op.c1[0].toFixed(0)} %`;
+    $('ra').textContent = `${c0[0].toFixed(0)} % cobertura · señal media ${c0[1].toFixed(0)} %`;
+    $('ro').textContent = `(${f1(x)}, ${f1(y)}) m · ${op.c1[0].toFixed(0)} % cobertura`;
+
+    /* ----- Verificación del óptimo (explicada) ----- */
+    const enBorde = p.con && Math.hypot(x - plan.plug.x, y - plan.plug.y) > p.R - 0.02;
+    const gradPeq = Math.hypot(op.g[0], op.g[1]) < 1.5;
+    const esMax = op.h.det > 0 && op.h.fxx < 0;
+    const lambda = enBorde
+      ? (op.g[0] * (x - plan.plug.x) + op.g[1] * (y - plan.plug.y)) / (2 * p.R * p.R)
+      : null;
+    const checks = [];
+    if (!enBorde) {
+      checks.push({ ok: gradPeq, t: '<b>Punto crítico (derivadas parciales):</b> ∇F ≈ 0, es decir ∂F/∂x = ∂F/∂y = 0. No hay dirección en la que la cobertura pueda subir.' });
+      checks.push({ ok: esMax, t: '<b>Máximo (criterio del Hessiano):</b> det(H) > 0 y ∂²F/∂x² < 0, así que la segunda derivada confirma un máximo local.' });
+    } else {
+      checks.push({ ok: true, t: '<b>Óptimo restringido (Lagrange):</b> el router está sobre el borde del cable y se cumple ∇F = λ∇g. Los gradientes de la cobertura F y de la restricción g son paralelos, con λ = ' + f2(lambda) + '.' });
+    }
+    if (p.con) {
+      checks.push({ ok: true, t: enBorde
+        ? '<b>Restricción activa:</b> g(x,y) = (x−xₑ)² + (y−yₑ)² − R² = 0. El óptimo está exactamente al alcance máximo del cable.'
+        : '<b>Restricción inactiva:</b> g(x,y) &lt; 0. El óptimo interior está dentro del círculo del cable, así que el cable no limita la posición.' });
+    }
+    $('chk').innerHTML = checks.map(c =>
+      `<p class="chk ${c.ok ? 'ok' : 'warn'}">${c.t}</p>`
+    ).join('');
+
+    /* ----- Números (en <details>, por si preguntan) ----- */
     $('gr').textContent = `${f2(op.g[0])} , ${f2(op.g[1])}`;
     $('hs').textContent = `${f1(op.h.det)} , ${f1(op.h.fxx)}`;
-    const enBorde = p.con && Math.hypot(x - plan.plug.x, y - plan.plug.y) > p.R - 0.02;
-    $('cl').textContent = enBorde ? 'Máximo restringido' : (op.h.det > 0 && op.h.fxx < 0 ? 'Máximo local' : 'Máximo aprox. (muros)');
-    $('lm').textContent = enBorde ? f2((op.g[0] * (x - plan.plug.x) + op.g[1] * (y - plan.plug.y)) / (2 * p.R * p.R)) : 'no aplica';
+    $('lm').textContent = enBorde ? f2(lambda) : 'no aplica (óptimo interior)';
     $('g0').textContent = `(${f2(g0[0])}, ${f2(g0[1])})`;
+
     dibujar(ctx, p, op, own, g0);
   }
 
@@ -116,13 +144,13 @@
       const R0 = view === 1 ? plan.router : { x: op.o.q[0], y: op.o.q[1] };
       for (let x = 0; x < W; x += 0.1) for (let y = 0; y < H; y += 0.1) {
         if (!M.insideAny(plan.rooms, x + 0.05, y + 0.05)) continue;
-        const v = M.senal(ctx, R0.x, R0.y, x + 0.05, y + 0.05), t = Math.min(1, Math.max(0, (v + 85) / 45));
+        const v = M.senal(ctx, R0.x, R0.y, x + 0.05, y + 0.05);
+        const t = Math.min(1, Math.max(0, v / 100));
         g.fillStyle = `hsl(${230 - 175 * t},80%,${v >= p.Pm ? 52 : 30}%)`; g.fillRect(x, y, 0.101, 0.101);
       }
     } else {
       g.fillStyle = 'rgba(128,128,128,.25)'; for (const r of plan.rooms) g.fillRect(r.x, r.y, r.w, r.h);
     }
-    // Muros (mismo espesor para todos) y puertas
     g.strokeStyle = ink; g.lineWidth = 0.09; g.lineCap = 'round';
     for (const wl of M.buildWalls(plan.rooms, plan.doors)) { g.beginPath(); g.moveTo(wl[0], wl[1]); g.lineTo(wl[2], wl[3]); g.stroke(); }
     g.strokeStyle = acc; g.lineWidth = 0.05; g.setLineDash([0.1, 0.08]);

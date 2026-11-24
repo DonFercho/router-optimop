@@ -25,27 +25,41 @@
   <div id="rooms"></div>
   <h2>Plantillas</h2>
   <div class="row"><button data-preset="casa">Casa</button><button data-preset="apartamento">Apto.</button><button data-preset="vacio">Vacío</button></div>
+
   <h2>Modelo de señal</h2>
-  <div class="m">P = P₁ − 10·n·log₁₀(d) − L·(muros)</div>
+  <div class="m">S = 100 − 10·n·log₁₀(d) − L·(muros)</div>
   <label>Pérdida por muro L <b id="vL"></b></label>
-  <small style="display:block;opacity:.7;font-size:11px;margin:-2px 0 8px">dB que se pierden al atravesar un muro. Más alto = peor señal detrás de paredes.</small>
-  <input id="L" type="range" min="0" max="10" step="0.5" value="4">
+  <small style="display:block;opacity:.7;font-size:11px;margin:-2px 0 8px">
+    Porcentaje de señal que se pierde al atravesar un muro. Más alto = peor cobertura detrás de paredes.
+  </small>
+  <input id="L" type="range" min="0" max="15" step="0.5" value="5">
+
   <label>Exponente de distancia n <b id="vn"></b></label>
-  <small style="display:block;opacity:.7;font-size:11px;margin:-2px 0 8px">Qué tan rápido cae la señal con la distancia. 2 = espacio abierto; 3–4 = interior con obstáculos.</small>
+  <small style="display:block;opacity:.7;font-size:11px;margin:-2px 0 8px">
+    Qué tan rápido cae la señal con la distancia. 2 = espacio abierto; 3–4 = interior con obstáculos.
+  </small>
   <input id="n" type="range" min="2" max="4" step="0.1" value="3">
-  <label>Umbral mínimo de señal <b id="vP"></b></label>
-  <small style="display:block;opacity:.7;font-size:11px;margin:-2px 0 8px">Señal mínima para considerar una zona cubierta. −67 dBm ≈ video; −70 dBm ≈ navegación básica.</small>
-  <input id="Pm" type="range" min="-85" max="-60" step="1" value="-64">
-  <h2>Restricción (Lagrange)</h2>
-  <label><span>Router con cable desde el enchufe</span><input id="rc" type="checkbox"></label>
-  <label>Largo del cable <b id="vR"></b></label><input id="R" type="range" min="1" max="8" step="0.5" value="4">
+
+  <label>Umbral mínimo de cobertura <b id="vP"></b></label>
+  <small style="display:block;opacity:.7;font-size:11px;margin:-2px 0 8px">
+    Debajo de este % de señal, la app considera la zona "no cubierta".
+  </small>
+  <input id="Pm" type="range" min="30" max="85" step="1" value="65">
+
+  <h2>Restricción con cable (Lagrange)</h2>
+  <label><span>Limitar el router al alcance del cable</span><input id="rc" type="checkbox"></label>
+  <label>Largo del cable R <b id="vR"></b></label>
+  <input id="R" type="range" min="1" max="8" step="0.5" value="4">
+  <small style="display:block;opacity:.7;font-size:11px;margin:6px 0 0">
+    Con cable activo, el router solo puede estar dentro del círculo de radio R centrado en el enchufe:
+    <b>g(x,y) = (x − xₑ)² + (y − yₑ)² − R² ≤ 0</b>.
+  </small>
 </section>
 
 <section class="card" aria-label="Plano">
   <div class="row" style="margin-bottom:10px"><button id="b1" class="on">Ver con router actual</button><button id="b2">Ver con router óptimo</button></div>
   <canvas id="cv" aria-label="Plano de la casa con mapa de calor de la señal"></canvas>
   <p class="estado" id="estado" role="status" aria-live="polite"></p>
-  <p class="hint">Estrella = punto óptimo · línea punteada = ascenso por gradiente · flecha naranja = ∇F.</p>
 </section>
 
 <section class="card" aria-label="Resultados">
@@ -53,19 +67,23 @@
   <div class="big" id="msg"></div>
   <div class="kv"><span>Router actual</span><b id="ra"></b></div>
   <div class="kv"><span>Router óptimo</span><b id="ro"></b></div>
-  <h2>Cálculo en el óptimo</h2>
-  <div class="kv"><span>∂F/∂x , ∂F/∂y</span><b id="gr"></b></div>
-  <div class="kv"><span>det(H) , F_xx</span><b id="hs"></b></div>
-  <div class="kv"><span>Clasificación</span><b id="cl"></b></div>
-  <div class="kv"><span>Multiplicador λ</span><b id="lm"></b></div>
-  <h2>En tu router actual</h2>
-  <div class="kv"><span>∇F</span><b id="g0"></b></div>
+
+  <h2>¿Qué verifica la app en el óptimo?</h2>
+  <div id="chk"></div>
+
+  <details><summary>Valores numéricos del cálculo</summary>
+    <div class="kv"><span>∇F en el óptimo</span><b id="gr"></b></div>
+    <div class="kv"><span>det(H) , F_xx</span><b id="hs"></b></div>
+    <div class="kv"><span>Multiplicador λ</span><b id="lm"></b></div>
+    <div class="kv"><span>∇F en el router actual</span><b id="g0"></b></div>
+  </details>
+
   <details><summary>Temas del curso que usa</summary><ul>
-    <li><b>Regla de la cadena:</b> P depende de d, y d de (x, y).</li>
-    <li><b>Integral doble en región no rectangular:</b> F suma la señal ponderada sobre las habitaciones dibujadas.</li>
-    <li><b>Derivadas parciales y gradiente:</b> el ascenso mueve el router hacia donde F sube más rápido.</li>
-    <li><b>Máximos y mínimos:</b> ∇F = 0 y signo del Hessiano.</li>
-    <li><b>Lagrange:</b> con cable, el óptimo queda en el borde del círculo y se cumple ∇F = λ∇g.</li></ul></details>
+    <li><b>Integral doble en región no rectangular:</b> F suma la señal ponderada sobre las habitaciones dibujadas (cualquier forma).</li>
+    <li><b>Derivadas parciales y gradiente:</b> el ascenso mueve el router hacia donde F sube más rápido, ∇F = (∂F/∂x₀, ∂F/∂y₀).</li>
+    <li><b>Máximos y mínimos:</b> en el óptimo ∇F = 0 y el criterio del Hessiano confirma que es un máximo.</li>
+    <li><b>Multiplicadores de Lagrange:</b> con cable, el óptimo cae en el borde del círculo y se cumple ∇F = λ∇g.</li>
+  </ul></details>
 </section>
 </main>
 <script src="js/modelo.js"></script>
