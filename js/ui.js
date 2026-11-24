@@ -56,14 +56,14 @@
 
   /* ---------- Cálculo y resultados ---------- */
   function params() {
-    return { L: +$('L').value, n: +$('n').value, Pm: +$('Pm').value, con: $('rc').checked, R: +$('R').value, ang: +$('A').value * Math.PI / 180 };
+    return { L: +$('L').value, n: +$('n').value, Pm: +$('Pm').value, con: $('rc').checked, R: +$('R').value };
   }
   const f1 = v => v.toFixed(1), f2 = v => v.toFixed(2);
-  function vaciar() { for (const id of ['ra', 'ro', 'gr', 'hs', 'cl', 'lm', 'g0', 'du']) $(id).textContent = '—'; }
+  function vaciar() { for (const id of ['ra', 'ro', 'gr', 'hs', 'cl', 'lm', 'g0']) $(id).textContent = '—'; }
 
   function actualizar() {
     const p = params();
-    $('vL').textContent = p.L + ' dB'; $('vn').textContent = p.n; $('vP').textContent = p.Pm + ' dBm'; $('vR').textContent = p.R + ' m'; $('vA').textContent = $('A').value + '°';
+    $('vL').textContent = p.L + ' dB'; $('vn').textContent = p.n; $('vP').textContent = p.Pm + ' dBm'; $('vR').textContent = p.R + ' m';
     asegurarDentro();
     if (!plan.rooms.length) {
       $('msg').textContent = 'Dibuja al menos una habitación con la herramienta «Habitación».'; vaciar(); dibujar(null); return;
@@ -87,7 +87,6 @@
     $('cl').textContent = enBorde ? 'Máximo restringido' : (op.h.det > 0 && op.h.fxx < 0 ? 'Máximo local' : 'Máximo aprox. (muros)');
     $('lm').textContent = enBorde ? f2((op.g[0] * (x - plan.plug.x) + op.g[1] * (y - plan.plug.y)) / (2 * p.R * p.R)) : 'no aplica';
     $('g0').textContent = `(${f2(g0[0])}, ${f2(g0[1])})`;
-    $('du').textContent = `${f2(g0[0] * Math.cos(p.ang) + g0[1] * Math.sin(p.ang))} %/m`;
     dibujar(ctx, p, op, own, g0);
   }
 
@@ -144,7 +143,6 @@
       g.strokeStyle = '#fff'; g.lineWidth = 0.05; g.setLineDash([0.08, 0.08]); g.beginPath();
       own.path.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.stroke(); g.setLineDash([]);
       flecha(plan.router.x, plan.router.y, g0[0], g0[1], org);
-      flecha(plan.router.x, plan.router.y, Math.cos(p.ang), Math.sin(p.ang), '#d9e0e6');
       g.fillStyle = org; g.strokeStyle = '#fff'; g.lineWidth = 0.05; g.beginPath();
       for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.15 : 0.4, a = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(op.o.q[0] + r * Math.cos(a), op.o.q[1] + r * Math.sin(a)); }
       g.closePath(); g.fill(); g.stroke();
@@ -204,21 +202,7 @@
   document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => usarPlano(Planos.clonar(b.dataset.preset))));
   $('b1').onclick = () => { view = 1; $('b1').className = 'on'; $('b2').className = ''; programar(); };
   $('b2').onclick = () => { view = 2; $('b2').className = 'on'; $('b1').className = ''; programar(); };
-  ['L', 'n', 'Pm', 'R', 'rc', 'A'].forEach(i => $(i).addEventListener('input', programar));
-  $('exp').onclick = () => {
-    const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'plano.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  };
-  $('imp').onclick = () => $('file').click();
-  $('file').addEventListener('change', e => {
-    const f = e.target.files[0]; if (!f) return;
-    const rd = new FileReader();
-    rd.onload = () => {
-      try { const p = Planos.validar(JSON.parse(rd.result)); if (p) { usarPlano(p); aviso('Plano importado.'); } else aviso('El archivo no es un plano válido (revisa medidas y solapes).'); }
-      catch (err) { aviso('No se pudo leer el archivo JSON.'); }
-    };
-    rd.readAsText(f); e.target.value = '';
-  });
+  ['L', 'n', 'Pm', 'R', 'rc'].forEach(i => $(i).addEventListener('input', programar));
   window.addEventListener('resize', programar);
 
   elegirHerramienta('router'); renderRooms(); actualizar();
